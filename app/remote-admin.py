@@ -1,13 +1,14 @@
 import argparse
 import sys
-from remotetools import RemoteAdmin
+from remotetools import RemoteAdmin, WOL
 from impacket.examples import logger as impacket_logger
+import wakeonlan
 
 def main():
     parser = argparse.ArgumentParser(description="Impacket Unified Remote Admin")
-    parser.add_argument("--machine", "-m", required=True, help="Target machine")
-    parser.add_argument("--user", "-u", required=True, help="Username")
-    parser.add_argument("--password", "-p", required=True, help="Password")
+    parser.add_argument("--machine", "-m", help="Target machine")
+    parser.add_argument("--user", "-u", help="Username")
+    parser.add_argument("--password", "-p", help="Password")
     parser.add_argument("--domain", "-d",  default=".", help="Domain name")
     parser.add_argument('-debug', action='store_true', help='Turn DEBUG output ON')
     parser.add_argument('-ts', action='store_true', help='Adds timestamp to every logging output')
@@ -32,6 +33,13 @@ def main():
     volume_parser = subparsers.add_parser('volume', help='Set system volume')
     volume_parser.add_argument("--level", type=int, choices=range(0, 101), required=True, help="Volume level (0-100)")
 
+    # WOL command
+    wol_parser = subparsers.add_parser('wol', help='Wake on LAN')
+    wol_parser.add_argument("mac", help="MAC address")
+    wol_parser.add_argument("--broadcast", default=wakeonlan.BROADCAST_IP, help="Broadcast IP")
+    wol_parser.add_argument("--port", type=int, default=wakeonlan.DEFAULT_PORT, help="Port")
+    wol_parser.add_argument("--interface", help="Interface IP")
+
     if len(sys.argv) == 1:
         parser.print_help()
         sys.exit(1)
@@ -39,6 +47,14 @@ def main():
     args = parser.parse_args()
 
     impacket_logger.init(args.ts, args.debug)
+
+    if args.action == 'wol':
+        wol = WOL(args.mac, args.interface, args.broadcast, args.port)
+        wol.send_magic_packet()
+        return
+
+    if not args.machine or not args.user or not args.password:
+        parser.error("the following arguments are required: --machine/-m, --user/-u, --password/-p")
 
     admin = RemoteAdmin(args.machine, args.user, args.password, args.domain)
 

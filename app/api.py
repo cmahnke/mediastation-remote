@@ -3,11 +3,12 @@ from pydantic import BaseModel, Field
 import logging
 import sys
 import os
+import wakeonlan
 
 # Ensure we can import remotetools if running from the same directory
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
-from remotetools import RemoteAdmin
+from remotetools import RemoteAdmin, WOL
 
 # Configure logging
 logging.basicConfig(
@@ -33,6 +34,12 @@ class ExecRequest(ConnectionInfo):
 
 class VolumeRequest(ConnectionInfo):
     level: int = Field(..., ge=0, le=100, description="Volume level (0-100)")
+
+class WOLRequest(BaseModel):
+    mac_address: str = Field(..., description="Target machine MAC address")
+    broadcast_ip: str = Field(default=wakeonlan.BROADCAST_IP, description="Broadcast IP address")
+    port: int = Field(default=wakeonlan.DEFAULT_PORT, description="WOL Port")
+    interface: str = Field(default=None, description="Interface IP to send from")
 
 @app.post("/shutdown", summary="Shutdown or reboot remote machine")
 async def shutdown(request: ShutdownRequest):
@@ -92,6 +99,24 @@ async def set_volume(request: VolumeRequest):
         return {"status": "success", "message": f"Volume set to {request.level}% on {request.machine}"}
     except Exception as e:
         logger.error(f"Volume set failed: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/wol", summary="Wake on LAN")
+async def wake_on_lan(request: WOLRequest):
+    """
+    Sends a Wake-on-LAN magic packet to the specified MAC address.
+    """
+    try:
+        wol = WOL(
+            machine=request.mac_address,
+            interface=request.interface,
+            broadcast=request.broadcast_ip,
+            port=request.port
+        )
+        wol.send_magic_packet()
+        return {"status": "success", "message": f"Magic packet sent to {request.mac_address}"}
+    except Exception as e:
+        logger.error(f"WOL failed: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 # @app.get("/health", summary="Health check")

@@ -4,6 +4,7 @@ from impacket.dcerpc.v5 import dcomrt
 from impacket.dcerpc.v5.dcom import wmi
 from impacket.smbconnection import  compute_lmhash, compute_nthash
 from impacket.dcerpc.v5.dtypes import NULL
+import wakeonlan
 
 class RemoteAdmin:
     pwsh = 'powershell.exe -NoProfile -ExecutionPolicy Bypass -EncodedCommand'
@@ -87,3 +88,13 @@ class RemoteAdmin:
         """
         self.logger.debug(f"Attempting to set volume to {level}%% on {self.target}...")
         self.wmi_powershell_exec(ps_script)
+
+class WOL:
+    def __init__(self, machine, interface=None, broadcast=wakeonlan.BROADCAST_IP, port=wakeonlan.DEFAULT_PORT):
+        self.machine = machine
+        self.interface = interface
+        self.broadcast = broadcast
+        self.port = port
+
+    def send_magic_packet(self):
+        wakeonlan.send_magic_packet(self.machine, ip_address=self.broadcast, interface=self.interface, port=self.port)

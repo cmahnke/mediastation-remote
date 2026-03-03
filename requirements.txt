@@ -1,0 +1,3 @@
+impacket
+fastapi[standard]
+pydantic

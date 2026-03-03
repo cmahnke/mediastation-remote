@@ -15,8 +15,8 @@ permissions:
   packages: write
   contents: write
 
-  jobs:
-  build_geonames:
+jobs:
+  build:
     name: Push Docker image to GitHub Packages
     runs-on: ubuntu-latest
     steps:
